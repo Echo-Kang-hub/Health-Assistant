@@ -16,6 +16,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -25,10 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -50,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewStatus;
     private Button buttonCapture;
     private Uri photoUri;
-    private File currentPhotoFile; // 记录当前拍摄的文件
+    private File currentPhotoFile;
 
     private AppDatabase db;
     private MedicineAdapter adapter;
@@ -76,8 +74,26 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
+        // 设置长按删除监听
+        adapter.setOnItemLongClickListener(medicine -> {
+            new AlertDialog.Builder(this)
+                    .setTitle("删除记录")
+                    .setMessage("确定要删除这条用药计划吗？")
+                    .setPositiveButton("删除", (dialog, which) -> deleteMedicine(medicine))
+                    .setNegativeButton("取消", null)
+                    .show();
+        });
+
         buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
         refreshMedicineList();
+    }
+
+    private void deleteMedicine(Medicine medicine) {
+        new Thread(() -> {
+            db.medicineDao().delete(medicine);
+            runOnUiThread(this::refreshMedicineList);
+        }).start();
+        Toast.makeText(this, "记录已删除", Toast.LENGTH_SHORT).show();
     }
 
     private void checkAndRequestPermissions() {
@@ -100,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(this, "未检测到相机，请在真机测试", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "未检测到相机", Toast.LENGTH_LONG).show();
         }
     }
     
@@ -115,44 +131,33 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Glide.with(this).load(photoUri).centerCrop().into(imageView);
-            uploadImage(currentPhotoFile); // 开始真实上传
+            uploadImage(currentPhotoFile);
         }
     }
 
-    /**
-     * 核心：使用 Retrofit 上传图片到后端
-     */
     private void uploadImage(File file) {
-        textViewStatus.setText("状态: AI 正在云端分析药单 (请稍候)...");
-
-        // 构造 MultipartBody
+        textViewStatus.setText("状态: AI 正在云端分析药单...");
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
         MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
 
-        // 发起请求
         RetrofitClient.getApiService().processPrescription(body).enqueue(new Callback<HealthResponse>() {
             @Override
             public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     HealthResponse result = response.body();
                     textViewStatus.setText("状态: AI 分析完成！");
-                    
-                    // 将返回的用药计划存入数据库
                     if (result.getMedicationPlan() != null) {
                         for (MedicinePlan plan : result.getMedicationPlan()) {
                             saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
                         }
-                        Toast.makeText(MainActivity.this, "识别到 " + result.getMedicationPlan().size() + " 种药品", Toast.LENGTH_SHORT).show();
                     }
                 } else {
-                    textViewStatus.setText("状态: 服务器响应错误 (" + response.code() + ")");
+                    textViewStatus.setText("状态: 服务器错误");
                 }
             }
-
             @Override
             public void onFailure(Call<HealthResponse> call, Throwable t) {
-                textViewStatus.setText("状态: 网络请求失败 - " + t.getMessage());
-                Log.e(TAG, "Upload failed", t);
+                textViewStatus.setText("状态: 网络请求失败");
             }
         });
     }

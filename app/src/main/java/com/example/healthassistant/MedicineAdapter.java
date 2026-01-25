@@ -12,6 +12,15 @@ import java.util.List;
 public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHolder> {
 
     private List<Medicine> medicineList = new ArrayList<>();
+    private OnItemLongClickListener longClickListener;
+
+    public interface OnItemLongClickListener {
+        void onItemLongClick(Medicine medicine);
+    }
+
+    public void setOnItemLongClickListener(OnItemLongClickListener listener) {
+        this.longClickListener = listener;
+    }
 
     public void setMedicines(List<Medicine> medicines) {
         this.medicineList = medicines;
@@ -31,6 +40,14 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
         holder.nameTv.setText(medicine.getName());
         holder.dosageTv.setText("剂量: " + medicine.getDosage());
         holder.freqTv.setText("频率: " + medicine.getFrequency());
+
+        // 设置长按监听
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onItemLongClick(medicine);
+            }
+            return true;
+        });
     }
 
     @Override
