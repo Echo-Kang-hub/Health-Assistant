@@ -19,19 +19,27 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewStatus;
     private Button buttonCapture;
     private Uri photoUri;
+    private File currentPhotoFile; // 记录当前拍摄的文件
 
     private AppDatabase db;
     private MedicineAdapter adapter;
@@ -49,11 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    dispatchTakePictureIntent();
-                } else {
-                    Toast.makeText(this, "相机权限被拒绝，无法拍摄。", Toast.LENGTH_LONG).show();
-                }
+                if (isGranted) dispatchTakePictureIntent();
             });
 
     @Override
@@ -62,20 +67,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         db = AppDatabase.getDatabase(this);
-
         imageView = findViewById(R.id.imageView_photo);
         textViewStatus = findViewById(R.id.textView_status);
         buttonCapture = findViewById(R.id.button_capture);
         recyclerView = findViewById(R.id.recyclerView_medicines);
 
-        // 初始化 RecyclerView
         adapter = new MedicineAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
         buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
-        
-        // 首次进入加载历史记录
         refreshMedicineList();
     }
 
@@ -90,20 +91,16 @@ public class MainActivity extends AppCompatActivity {
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            File photoFile = null;
             try {
-                photoFile = createImageFile();
-            } catch (IOException ex) {
-                return;
-            }
-            if (photoFile != null) {
-                photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", photoFile);
+                currentPhotoFile = createImageFile();
+                photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", currentPhotoFile);
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
                 startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+            } catch (IOException ex) {
+                Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(this, "模拟器未检测到相机，模拟识别中...", Toast.LENGTH_SHORT).show();
-            sendImageToServer();
+            Toast.makeText(this, "未检测到相机，请在真机测试", Toast.LENGTH_LONG).show();
         }
     }
     
@@ -118,28 +115,51 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Glide.with(this).load(photoUri).centerCrop().into(imageView);
-            sendImageToServer();
+            uploadImage(currentPhotoFile); // 开始真实上传
         }
     }
 
-    private void sendImageToServer() {
-        textViewStatus.setText("状态: AI 正在识别并保存...");
-        
-        new android.os.Handler().postDelayed(() -> {
-            // 模拟识别两个药
-            saveToDatabase("感冒灵", "一次一包", "一日三次");
-            saveToDatabase("维生素C", "500mg", "一日一次");
-            
-            textViewStatus.setText("状态: 识别并保存成功！");
-            Toast.makeText(this, "计划已更新", Toast.LENGTH_SHORT).show();
-        }, 1500);
+    /**
+     * 核心：使用 Retrofit 上传图片到后端
+     */
+    private void uploadImage(File file) {
+        textViewStatus.setText("状态: AI 正在云端分析药单 (请稍候)...");
+
+        // 构造 MultipartBody
+        RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
+
+        // 发起请求
+        RetrofitClient.getApiService().processPrescription(body).enqueue(new Callback<HealthResponse>() {
+            @Override
+            public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    HealthResponse result = response.body();
+                    textViewStatus.setText("状态: AI 分析完成！");
+                    
+                    // 将返回的用药计划存入数据库
+                    if (result.getMedicationPlan() != null) {
+                        for (MedicinePlan plan : result.getMedicationPlan()) {
+                            saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
+                        }
+                        Toast.makeText(MainActivity.this, "识别到 " + result.getMedicationPlan().size() + " 种药品", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    textViewStatus.setText("状态: 服务器响应错误 (" + response.code() + ")");
+                }
+            }
+
+            @Override
+            public void onFailure(Call<HealthResponse> call, Throwable t) {
+                textViewStatus.setText("状态: 网络请求失败 - " + t.getMessage());
+                Log.e(TAG, "Upload failed", t);
+            }
+        });
     }
 
     private void saveToDatabase(String name, String dosage, String freq) {
         new Thread(() -> {
-            Medicine medicine = new Medicine(name, dosage, freq, System.currentTimeMillis());
-            db.medicineDao().insert(medicine);
-            // 保存后刷新列表
+            db.medicineDao().insert(new Medicine(name, dosage, freq, System.currentTimeMillis()));
             runOnUiThread(this::refreshMedicineList);
         }).start();
     }
