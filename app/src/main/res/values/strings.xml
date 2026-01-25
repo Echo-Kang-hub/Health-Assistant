@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Health Assistant</string>
+    <string name="app_name">HealthAssistant</string>
+    <string name="image_preview">Image Preview Placeholder</string>
 </resources>

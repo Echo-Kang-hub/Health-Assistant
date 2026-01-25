@@ -4,9 +4,7 @@ plugins {
 
 android {
     namespace 'com.example.healthassistant'
-    compileSdk {
-        version = release(35)
-    }
+    compileSdk 36 // 提升到 36 以满足依赖要求
 
     defaultConfig {
         applicationId "com.example.healthassistant"
@@ -28,7 +26,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    buildToolsVersion '35.0.0'
+    buildToolsVersion '36.0.0' // 同步更新 Build Tools Version
 }
 
 dependencies {
