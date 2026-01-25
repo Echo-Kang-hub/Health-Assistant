@@ -20,4 +20,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Health Assistant"
-include(":app")
+include ':app'
