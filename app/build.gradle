@@ -39,4 +39,23 @@ dependencies {
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
+
+    // --- AI Health Butler 核心依赖 ---
+
+    // 1. Retrofit & Gson for Networking (与Python后端通信)
+    def retrofit_version = "2.9.0"
+    implementation "com.squareup.retrofit2:retrofit:$retrofit_version"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofit_version"
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // 2. Room Database for local storage (药品计划)
+    def room_version = "2.6.1"
+    implementation "androidx.room:room-runtime:$room_version"
+    // Room 编译时处理器 - 必须
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+
+    // 3. Glide for Image Loading (显示拍摄的照片)
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    // Glide 编译时处理器 - 必须
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
 }
