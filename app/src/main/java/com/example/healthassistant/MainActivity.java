@@ -61,8 +61,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewDiagnosis;
     private TextView textViewNotes;
     private TextView textViewSafetyReport;
-    private TextView textViewReportContent; // 新增：每日报告内容
-    private TextView textViewReportDate;    // 新增：每日报告日期
+    private TextView textViewReportContent; // 每日报告内容
+    private TextView textViewReportDate;    // 每日报告日期
     private FloatingActionButton buttonSettings; 
     private Uri photoUri;
     private File currentPhotoFile;
@@ -98,8 +98,8 @@ public class MainActivity extends AppCompatActivity {
         textViewDiagnosis = findViewById(R.id.textView_diagnosis);
         textViewNotes = findViewById(R.id.textView_notes);
         textViewSafetyReport = findViewById(R.id.textView_safety_report); 
-        textViewReportContent = findViewById(R.id.textView_report_content); // 绑定
-        textViewReportDate = findViewById(R.id.textView_report_date);       // 绑定
+        textViewReportContent = findViewById(R.id.textView_report_content); 
+        textViewReportDate = findViewById(R.id.textView_report_date);       
         buttonSettings = findViewById(R.id.button_settings);
         Button buttonCapture = findViewById(R.id.button_capture);
         RecyclerView recyclerView = findViewById(R.id.recyclerView_medicines);
@@ -141,7 +141,8 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     DailyReportResponse report = response.body();
                     if (report.isSuccess()) {
-                        textViewReportContent.setText(report.getContent());
+                        // 修正：调用 getSummary() 而非 getContent()
+                        textViewReportContent.setText(report.getSummary());
                         textViewReportDate.setText(report.getReportDate());
                     }
                 }
