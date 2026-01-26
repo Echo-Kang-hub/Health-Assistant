@@ -6,12 +6,21 @@
     android:layout_marginBottom="4dp"
     android:background="?android:attr/selectableItemBackground">
 
-    <LinearLayout
-        android:id="@+id/info_container"
+    <CheckBox
+        android:id="@+id/checkbox_select"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_centerVertical="true"
         android:layout_alignParentStart="true"
+        android:visibility="gone"
+        android:layout_marginEnd="8dp"/>
+
+    <LinearLayout
+        android:id="@+id/info_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_toEndOf="@id/checkbox_select"
         android:layout_toStartOf="@+id/reminder_container">
 
         <TextView
@@ -78,7 +87,8 @@
             android:layout_height="32dp"
             android:padding="4dp"
             android:src="@android:drawable/ic_lock_idle_alarm"
-            android:alpha="0.3" />
+            android:alpha="0.3"
+            android:contentDescription="提醒闹钟" />
     </LinearLayout>
 
     <View

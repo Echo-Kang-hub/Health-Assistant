@@ -16,7 +16,9 @@ import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,6 +34,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 
@@ -61,11 +64,18 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewDiagnosis;
     private TextView textViewNotes;
     private TextView textViewSafetyReport;
-    private TextView textViewReportContent; // 每日报告内容
-    private TextView textViewReportDate;    // 每日报告日期
+    private TextView textViewReportContent; 
+    private TextView textViewReportDate;    
     private FloatingActionButton buttonSettings; 
     private Uri photoUri;
     private File currentPhotoFile;
+
+    // 选择模式相关 View
+    private MaterialCardView cardSelectionActions;
+    private CheckBox checkboxAll;
+    private TextView textSelectionCount;
+    private Button buttonDeleteSelected;
+    private ImageButton buttonCloseSelection;
 
     private AppDatabase db;
     private MedicineAdapter adapter;
@@ -104,34 +114,90 @@ public class MainActivity extends AppCompatActivity {
         Button buttonCapture = findViewById(R.id.button_capture);
         RecyclerView recyclerView = findViewById(R.id.recyclerView_medicines);
 
+        // 初始化选择模式 View
+        cardSelectionActions = findViewById(R.id.card_selection_actions);
+        checkboxAll = findViewById(R.id.checkbox_all);
+        textSelectionCount = findViewById(R.id.text_selection_count);
+        buttonDeleteSelected = findViewById(R.id.button_delete_selected);
+        buttonCloseSelection = findViewById(R.id.button_close_selection);
+
         adapter = new MedicineAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
         adapter.setOnItemClickListener(this::showEditDialog);
         adapter.setOnItemLongClickListener(medicine -> {
+            // 长按不再弹出单个删除对话框，逻辑已移动到适配器进入选择模式
+        });
+
+        adapter.setOnReminderClickListener(this::handleReminderClick);
+
+        // 设置选择模式监听
+        adapter.setOnSelectionModeListener(new MedicineAdapter.OnSelectionModeListener() {
+            @Override
+            public void onSelectionModeChanged(boolean enabled) {
+                cardSelectionActions.setVisibility(enabled ? View.VISIBLE : View.GONE);
+                if (!enabled) {
+                    checkboxAll.setChecked(false);
+                }
+            }
+
+            @Override
+            public void onSelectionCountChanged(int count) {
+                textSelectionCount.setText("已选 " + count + " 项");
+                buttonDeleteSelected.setEnabled(count > 0);
+            }
+        });
+
+        // 全选复选框逻辑
+        checkboxAll.setOnClickListener(v -> {
+            adapter.selectAll(checkboxAll.isChecked());
+        });
+
+        // 删除选中项逻辑
+        buttonDeleteSelected.setOnClickListener(v -> {
+            List<Medicine> selected = adapter.getSelectedItems();
+            if (selected.isEmpty()) return;
+
             new AlertDialog.Builder(this)
-                    .setTitle("删除记录")
-                    .setMessage("确定要删除这条用药计划吗？")
-                    .setPositiveButton("删除", (dialog, which) -> deleteMedicine(medicine))
+                    .setTitle("批量删除")
+                    .setMessage("确定要删除选中的 " + selected.size() + " 条记录吗？")
+                    .setPositiveButton("删除", (dialog, which) -> deleteMultipleMedicines(selected))
                     .setNegativeButton("取消", null)
                     .show();
         });
 
-        adapter.setOnReminderClickListener(this::handleReminderClick);
+        // 退出选择模式逻辑
+        buttonCloseSelection.setOnClickListener(v -> {
+            adapter.setSelectionMode(false);
+        });
 
         buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
         buttonSettings.setOnClickListener(v -> showProfileSettingsDialog());
         
         refreshMedicineList();
         updateSafetyReportDisplay();
-        fetchDailyReport(); // 自动获取每日报告
+        fetchDailyReport(); 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
         }
+    }
+
+    private void deleteMultipleMedicines(List<Medicine> medicines) {
+        new Thread(() -> {
+            for (Medicine m : medicines) {
+                ReminderManager.cancelReminder(this, m);
+                db.medicineDao().delete(m);
+            }
+            runOnUiThread(() -> {
+                adapter.setSelectionMode(false);
+                refreshMedicineList();
+                Toast.makeText(this, "已删除选中记录", Toast.LENGTH_SHORT).show();
+            });
+        }).start();
     }
 
     private void fetchDailyReport() {
@@ -141,7 +207,6 @@ public class MainActivity extends AppCompatActivity {
                 if (response.isSuccessful() && response.body() != null) {
                     DailyReportResponse report = response.body();
                     if (report.isSuccess()) {
-                        // 修正：调用 getSummary() 而非 getContent()
                         textViewReportContent.setText(report.getSummary());
                         textViewReportDate.setText(report.getReportDate());
                     }
