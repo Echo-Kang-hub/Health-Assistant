@@ -13,13 +13,22 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
 
     private List<Medicine> medicineList = new ArrayList<>();
     private OnItemLongClickListener longClickListener;
+    private OnItemClickListener clickListener; // 新增：点击监听
 
     public interface OnItemLongClickListener {
         void onItemLongClick(Medicine medicine);
     }
 
+    public interface OnItemClickListener { // 新增：点击接口
+        void onItemClick(Medicine medicine);
+    }
+
     public void setOnItemLongClickListener(OnItemLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) { // 新增：设置点击监听
+        this.clickListener = listener;
     }
 
     public void setMedicines(List<Medicine> medicines) {
@@ -40,6 +49,13 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
         holder.nameTv.setText(medicine.getName());
         holder.dosageTv.setText("剂量: " + medicine.getDosage());
         holder.freqTv.setText("频率: " + medicine.getFrequency());
+
+        // 设置点击监听
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onItemClick(medicine);
+            }
+        });
 
         // 设置长按监听
         holder.itemView.setOnLongClickListener(v -> {

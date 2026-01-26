@@ -29,7 +29,14 @@ public class Medicine {
     public void setId(int id) { this.id = id; }
 
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; } // 已添加
+
     public String getDosage() { return dosage; }
+    public void setDosage(String dosage) { this.dosage = dosage; } // 已添加
+
     public String getFrequency() { return frequency; }
+    public void setFrequency(String frequency) { this.frequency = frequency; } // 已添加
+
     public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 }

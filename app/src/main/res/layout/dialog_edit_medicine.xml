@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/edit_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="药品名称"
+        android:inputType="text"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/edit_dosage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="剂量 (如: 一次一包)"
+        android:inputType="text"
+        android:layout_marginBottom="12dp"/>
+
+    <EditText
+        android:id="@+id/edit_frequency"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="频率 (如: 一日三次)"
+        android:inputType="text" />
+
+</LinearLayout>

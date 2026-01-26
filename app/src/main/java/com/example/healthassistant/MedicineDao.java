@@ -4,6 +4,7 @@ import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
+import androidx.room.Update;
 import java.util.List;
 
 @Dao
@@ -12,7 +13,10 @@ public interface MedicineDao {
     void insert(Medicine medicine);
 
     @Delete
-    void delete(Medicine medicine); // 新增：删除单个记录
+    void delete(Medicine medicine);
+
+    @Update
+    void update(Medicine medicine); // 新增：更新单个记录
 
     @Query("SELECT * FROM medicine_table ORDER BY timestamp DESC")
     List<Medicine> getAllMedicines();

@@ -7,8 +7,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -42,17 +44,16 @@ import retrofit2.Response;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_IMAGE_CAPTURE = 1001;
-    private static final String TAG = "HealthAssistant";
 
     private ImageView imageView;
     private TextView textViewStatus;
-    private Button buttonCapture;
+    private TextView textViewDiagnosis;
+    private TextView textViewNotes;
     private Uri photoUri;
     private File currentPhotoFile;
 
     private AppDatabase db;
     private MedicineAdapter adapter;
-    private RecyclerView recyclerView;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -67,12 +68,17 @@ public class MainActivity extends AppCompatActivity {
         db = AppDatabase.getDatabase(this);
         imageView = findViewById(R.id.imageView_photo);
         textViewStatus = findViewById(R.id.textView_status);
-        buttonCapture = findViewById(R.id.button_capture);
-        recyclerView = findViewById(R.id.recyclerView_medicines);
+        textViewDiagnosis = findViewById(R.id.textView_diagnosis);
+        textViewNotes = findViewById(R.id.textView_notes);
+        Button buttonCapture = findViewById(R.id.button_capture);
+        RecyclerView recyclerView = findViewById(R.id.recyclerView_medicines);
 
         adapter = new MedicineAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+
+        // 设置点击修改监听
+        adapter.setOnItemClickListener(this::showEditDialog);
 
         // 设置长按删除监听
         adapter.setOnItemLongClickListener(medicine -> {
@@ -86,6 +92,47 @@ public class MainActivity extends AppCompatActivity {
 
         buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
         refreshMedicineList();
+    }
+
+    private void showEditDialog(Medicine medicine) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("修改用药信息");
+
+        View viewInflated = LayoutInflater.from(this).inflate(R.layout.dialog_edit_medicine, null);
+        final EditText inputName = viewInflated.findViewById(R.id.edit_name);
+        final EditText inputDosage = viewInflated.findViewById(R.id.edit_dosage);
+        final EditText inputFrequency = viewInflated.findViewById(R.id.edit_frequency);
+
+        inputName.setText(medicine.getName());
+        inputDosage.setText(medicine.getDosage());
+        inputFrequency.setText(medicine.getFrequency());
+
+        builder.setView(viewInflated);
+
+        builder.setPositiveButton("保存", (dialog, which) -> {
+            String newName = inputName.getText().toString().trim();
+            String newDosage = inputDosage.getText().toString().trim();
+            String newFreq = inputFrequency.getText().toString().trim();
+            
+            if (!newName.isEmpty()) {
+                medicine.setName(newName);
+                medicine.setDosage(newDosage);
+                medicine.setFrequency(newFreq);
+                updateMedicine(medicine);
+            } else {
+                Toast.makeText(this, "药品名称不能为空", Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("取消", (dialog, which) -> dialog.cancel());
+        builder.show();
+    }
+
+    private void updateMedicine(Medicine medicine) {
+        new Thread(() -> {
+            db.medicineDao().update(medicine);
+            runOnUiThread(this::refreshMedicineList);
+        }).start();
+        Toast.makeText(this, "修改已保存", Toast.LENGTH_SHORT).show();
     }
 
     private void deleteMedicine(Medicine medicine) {
@@ -145,14 +192,36 @@ public class MainActivity extends AppCompatActivity {
             public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     HealthResponse result = response.body();
-                    textViewStatus.setText("状态: AI 分析完成！");
-                    if (result.getMedicationPlan() != null) {
-                        for (MedicinePlan plan : result.getMedicationPlan()) {
-                            saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
+                    
+                    if (result.isSuccess()) {
+                        // ✅ 识别成功 (HTTP 200, success: true)
+                        textViewStatus.setText("状态: AI 分析完成！");
+                        
+                        // 更新诊断和建议
+                        textViewDiagnosis.setText("诊断结论: " + (result.getDiagnosis() != null ? result.getDiagnosis() : "未明确"));
+                        textViewNotes.setText("健康建议: " + (result.getNotes() != null ? result.getNotes() : "无额外说明"));
+
+                        if (result.getMedicationPlan() != null) {
+                            for (MedicinePlan plan : result.getMedicationPlan()) {
+                                saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
+                            }
                         }
+                    } else {
+                        // ❌ 识别失败 (HTTP 200, but success: false)
+                        String errorMessage = result.getError() != null && !result.getError().isEmpty() 
+                                            ? result.getError() 
+                                            : "未能识别到处方中的药品信息，请提供清晰的处方图片";
+                        
+                        textViewStatus.setText("状态: 识别失败");
+                        textViewDiagnosis.setText("诊断结论: 识别失败");
+                        textViewNotes.setText("错误信息: " + errorMessage);
+                        Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 } else {
-                    textViewStatus.setText("状态: 服务器错误");
+                    // 💥 服务器错误 (HTTP 400, 500 etc.)
+                    textViewStatus.setText("状态: 服务器错误 (" + response.code() + ")");
+                    textViewDiagnosis.setText("诊断结论: 请求失败");
+                    textViewNotes.setText("错误信息: 无法连接或服务器异常");
                 }
             }
             @Override
