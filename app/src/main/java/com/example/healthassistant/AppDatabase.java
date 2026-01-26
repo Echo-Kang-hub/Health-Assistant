@@ -5,7 +5,8 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {Medicine.class}, version = 1, exportSchema = false)
+// 更新版本号从 1 到 2，以适配 Medicine 实体类的新字段
+@Database(entities = {Medicine.class}, version = 2, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract MedicineDao medicineDao();
 
@@ -17,6 +18,8 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                             AppDatabase.class, "health_database")
+                            // 关键：在开发阶段，如果数据库版本不匹配，则重建数据库（会清空旧数据）
+                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }

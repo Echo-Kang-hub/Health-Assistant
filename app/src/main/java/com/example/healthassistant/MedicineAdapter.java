@@ -3,6 +3,7 @@ package com.example.healthassistant;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,22 +14,31 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
 
     private List<Medicine> medicineList = new ArrayList<>();
     private OnItemLongClickListener longClickListener;
-    private OnItemClickListener clickListener; // 新增：点击监听
+    private OnItemClickListener clickListener;
+    private OnReminderClickListener reminderClickListener; // 新增：提醒点击监听
 
     public interface OnItemLongClickListener {
         void onItemLongClick(Medicine medicine);
     }
 
-    public interface OnItemClickListener { // 新增：点击接口
+    public interface OnItemClickListener {
         void onItemClick(Medicine medicine);
+    }
+
+    public interface OnReminderClickListener { // 新增：提醒点击接口
+        void onReminderClick(Medicine medicine);
     }
 
     public void setOnItemLongClickListener(OnItemLongClickListener listener) {
         this.longClickListener = listener;
     }
 
-    public void setOnItemClickListener(OnItemClickListener listener) { // 新增：设置点击监听
+    public void setOnItemClickListener(OnItemClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setOnReminderClickListener(OnReminderClickListener listener) { // 新增
+        this.reminderClickListener = listener;
     }
 
     public void setMedicines(List<Medicine> medicines) {
@@ -50,14 +60,31 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
         holder.dosageTv.setText("剂量: " + medicine.getDosage());
         holder.freqTv.setText("频率: " + medicine.getFrequency());
 
-        // 设置点击监听
+        // 处理提醒 UI
+        if (medicine.isReminderEnabled() && medicine.getReminderTime() != null && !medicine.getReminderTime().isEmpty()) {
+            holder.reminderTimeTv.setText("提醒: " + medicine.getReminderTime());
+            holder.reminderTimeTv.setVisibility(View.VISIBLE);
+            holder.imageReminder.setAlpha(1.0f); // 高亮图标
+        } else {
+            holder.reminderTimeTv.setVisibility(View.GONE);
+            holder.imageReminder.setAlpha(0.3f); // 暗淡图标
+        }
+
+        // 提醒图标点击
+        holder.imageReminder.setOnClickListener(v -> {
+            if (reminderClickListener != null) {
+                reminderClickListener.onReminderClick(medicine);
+            }
+        });
+
+        // 整个卡片点击
         holder.itemView.setOnClickListener(v -> {
             if (clickListener != null) {
                 clickListener.onItemClick(medicine);
             }
         });
 
-        // 设置长按监听
+        // 长按监听
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
                 longClickListener.onItemLongClick(medicine);
@@ -72,13 +99,16 @@ public class MedicineAdapter extends RecyclerView.Adapter<MedicineAdapter.ViewHo
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView nameTv, dosageTv, freqTv;
+        TextView nameTv, dosageTv, freqTv, reminderTimeTv;
+        ImageView imageReminder;
 
         ViewHolder(View itemView) {
             super(itemView);
             nameTv = itemView.findViewById(R.id.text_name);
             dosageTv = itemView.findViewById(R.id.text_dosage);
             freqTv = itemView.findViewById(R.id.text_frequency);
+            reminderTimeTv = itemView.findViewById(R.id.text_reminder_time);
+            imageReminder = itemView.findViewById(R.id.image_reminder);
         }
     }
 }

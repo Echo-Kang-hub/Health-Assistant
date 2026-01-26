@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="请填写以下健康信息 (可选):"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- 过敏史 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="过敏药物 (用逗号,分隔):"
+        android:layout_marginTop="8dp" />
+    <EditText
+        android:id="@+id/edit_allergies"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:hint="如: 青霉素, 磺胺类" />
+
+    <!-- 体重 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="体重 (kg):"
+        android:layout_marginTop="8dp" />
+    <EditText
+        android:id="@+id/edit_weight"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        android:hint="例如: 70.5" />
+
+    <!-- 孕期/哺乳期/儿童状态 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="特殊状态 (NONE/PREGNANT/LACTATING/CHILD):"
+        android:layout_marginTop="8dp" />
+    <EditText
+        android:id="@+id/edit_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="textCapCharacters"
+        android:hint="NONE" />
+
+</LinearLayout>
