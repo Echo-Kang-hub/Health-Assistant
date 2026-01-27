@@ -16,6 +16,11 @@ This repository is a single-module Android app built with the Gradle wrapper. Us
 - `./gradlew connectedAndroidTest` runs instrumented tests on a device/emulator.
 - `./gradlew lint` runs Android Lint checks.
 
+## Deprecation & UI Change Policy
+- When replacing deprecated APIs or updating UI layouts/styles, run `./gradlew build` after each change and keep the change only if the build succeeds.
+- 任何替换 deprecated 或 UI 改动后都要单独执行 `./gradlew build` 验证，失败则不要保留该改动。
+- Consult the latest official documentation whenever needed to ensure correctness.
+
 ## Coding Style & Naming Conventions
 - Java 17 is the target (`compileOptions` in `app/build.gradle`). Use 4-space indentation and Android Studio defaults for formatting.
 - Classes use PascalCase (`MainActivity`), methods/fields use camelCase, and packages stay under `com.example.healthassistant`.

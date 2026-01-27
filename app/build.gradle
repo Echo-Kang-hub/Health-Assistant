@@ -30,7 +30,7 @@ def debugKeystorePath = localProps.getProperty("debug.keystore.path", ".data/and
 def debugKeystoreFile = rootProject.file(debugKeystorePath)
 
 android {
-    namespace 'com.example.healthassistant'
+    namespace = "com.example.healthassistant"
     compileSdk 36 // 提升到 36 以满足依赖要求
 
     defaultConfig {
@@ -44,7 +44,7 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 
     signingConfigs {
@@ -59,7 +59,7 @@ android {
 
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
             buildConfigField "String", "BACKEND_BASE_URL", "\"${backendUrlPrimary}\""
             buildConfigField "String", "FALLBACK_BACKEND_BASE_URL", "\"${backendUrlDebug}\""
         }
@@ -104,4 +104,12 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     // Glide 编译时处理器 - 必须
     annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+}
+
+def releaseOutputMetadata = layout.buildDirectory.file("outputs/apk/release/output-metadata.json")
+tasks.matching { it.name == "packageRelease" }.configureEach {
+    outputs.file(releaseOutputMetadata)
+}
+tasks.matching { it.name == "createReleaseApkListingFileRedirect" }.configureEach {
+    dependsOn("packageRelease")
 }

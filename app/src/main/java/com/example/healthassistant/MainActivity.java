@@ -2,7 +2,6 @@ package com.example.healthassistant;
 
 import android.Manifest;
 import android.app.TimePickerDialog;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -12,7 +11,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -25,7 +23,6 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -56,8 +53,6 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
-
-    private static final int REQUEST_IMAGE_CAPTURE = 1001;
 
     private ImageView imageView;
     private TextView textViewStatus;
@@ -94,6 +89,19 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, "提醒通知权限已开启", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "通知权限未开启，提醒功能将无法正常工作", Toast.LENGTH_LONG).show();
+                }
+            });
+
+    private final ActivityResultLauncher<Uri> takePictureLauncher =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (success && currentPhotoFile != null) {
+                    File processedFile = processImage(currentPhotoFile);
+                    Glide.with(this).load(processedFile).centerCrop().into(imageView);
+                    uploadImage(processedFile);
+                } else if (!success) {
+                    Toast.makeText(this, "拍照已取消", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "无法读取拍摄的照片", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -306,18 +314,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            try {
-                currentPhotoFile = createImageFile();
-                photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", currentPhotoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            } catch (IOException ex) {
-                Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Toast.makeText(this, "未检测到相机", Toast.LENGTH_LONG).show();
+        try {
+            currentPhotoFile = createImageFile();
+            photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", currentPhotoFile);
+            takePictureLauncher.launch(photoUri);
+        } catch (IOException ex) {
+            Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -325,16 +327,6 @@ public class MainActivity extends AppCompatActivity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA).format(new Date());
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         return File.createTempFile("JPEG_" + timeStamp + "_", ".jpg", storageDir);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File processedFile = processImage(currentPhotoFile);
-            Glide.with(this).load(processedFile).centerCrop().into(imageView);
-            uploadImage(processedFile);
-        }
     }
 
     private File processImage(File imageFile) {
