@@ -28,6 +28,7 @@ This repository is a single-module Android app built with the Gradle wrapper. Us
 ## Commit & Pull Request Guidelines
 - Commits are short, imperative summaries (e.g., "Rebuild project with Java and Groovy"). Keep scope focused.
 - After making changes, create a commit before finishing the task. Do not leave the worktree dirty.
+- 每次改动后必须自己写 commit（不要留下脏工作区）。
 - Prefer Conventional Commits with scope when possible: `type(scope): summary` (e.g., `fix(network): switch debug base url`).
 - PRs should describe the change, include testing notes (commands run), and attach screenshots for UI changes.
 
