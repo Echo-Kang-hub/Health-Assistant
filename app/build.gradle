@@ -11,15 +11,19 @@ if (localPropsFile.exists()) {
 }
 
 // 统一的后端地址配置：
-// - debug 默认走本地后端（Android 模拟器访问宿主机请使用 10.0.2.2）
-// - release 默认走现有远端地址
+// - primary 默认走 100.124.104.65（可在 local.properties 覆盖）
+// - debug fallback 默认走本地后端（Android 模拟器访问宿主机请使用 10.0.2.2）
+// - release fallback 默认走现有远端地址
 // - 可在 local.properties 中覆盖（不会被提交）：
+//   backend.baseUrl.primary=http://100.124.104.65:5000/
 //   backend.baseUrl.debug=http://10.0.2.2:5000/
 //   backend.baseUrl.release=https://your-prod-host/
 //   debug.keystore.path=.data/android/debug.keystore
+def backendUrlPrimaryDefault = "http://100.124.104.65:5000/"
 def backendUrlRemoteDefault = "https://rocky-phantasmagorical-oafishly.ngrok-free.dev/"
 def backendUrlDebugDefault = "http://10.0.2.2:5000/"
 
+def backendUrlPrimary = localProps.getProperty("backend.baseUrl.primary", backendUrlPrimaryDefault)
 def backendUrlDebug = localProps.getProperty("backend.baseUrl.debug", backendUrlDebugDefault)
 def backendUrlRelease = localProps.getProperty("backend.baseUrl.release", backendUrlRemoteDefault)
 def debugKeystorePath = localProps.getProperty("debug.keystore.path", ".data/android/debug.keystore")
@@ -56,12 +60,14 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            buildConfigField "String", "BACKEND_BASE_URL", "\"${backendUrlDebug}\""
+            buildConfigField "String", "BACKEND_BASE_URL", "\"${backendUrlPrimary}\""
+            buildConfigField "String", "FALLBACK_BACKEND_BASE_URL", "\"${backendUrlDebug}\""
         }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField "String", "BACKEND_BASE_URL", "\"${backendUrlRelease}\""
+            buildConfigField "String", "BACKEND_BASE_URL", "\"${backendUrlPrimary}\""
+            buildConfigField "String", "FALLBACK_BACKEND_BASE_URL", "\"${backendUrlRelease}\""
         }
     }
     compileOptions {
