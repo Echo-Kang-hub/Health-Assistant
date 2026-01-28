@@ -1,29 +1,18 @@
 package com.example.healthassistant;
 
 import android.Manifest;
-import android.animation.ArgbEvaluator;
-import android.animation.ValueAnimator;
 import android.app.TimePickerDialog;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.graphics.drawable.GradientDrawable;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.AnimationUtils;
-import android.view.animation.LayoutAnimationController;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -34,19 +23,15 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.transition.TransitionManager;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.gson.Gson;
 
@@ -69,10 +54,6 @@ import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int REQUEST_IMAGE_CAPTURE = 1001;
-    private static final String PREFS_NAME = "HealthAssistantPrefs";
-    private static final String KEY_THEME_MODE = "theme_mode";
-
     private ImageView imageView;
     private TextView textViewStatus;
     private TextView textViewDiagnosis;
@@ -80,16 +61,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView textViewSafetyReport;
     private TextView textViewReportContent; 
     private TextView textViewReportDate;    
-    private View buttonSettings; 
-    private ImageView buttonThemeToggle; // 修改为 ImageView 以便设置 src
+    private FloatingActionButton buttonSettings; 
     private Uri photoUri;
     private File currentPhotoFile;
-
-    // 统计面板 View
-    private TextView textMedicineCount;
-    private View layoutEmptyState;
-    private View headerBackground; // 头部背景 View
-    private View rootView; // 根布局，用于做颜色动画
 
     // 选择模式相关 View
     private MaterialCardView cardSelectionActions;
@@ -97,12 +71,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView textSelectionCount;
     private Button buttonDeleteSelected;
     private ImageButton buttonCloseSelection;
-    private MaterialCardView cardPhotoPreview;
-    private ExtendedFloatingActionButton buttonCapture;
 
     private AppDatabase db;
     private MedicineAdapter adapter;
-    private RecyclerView recyclerView;
 
     private SafetyReport currentSafetyReport;
     private UserProfile currentUserProfile;
@@ -121,16 +92,25 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+    private final ActivityResultLauncher<Uri> takePictureLauncher =
+            registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+                if (success && currentPhotoFile != null) {
+                    File processedFile = processImage(currentPhotoFile);
+                    Glide.with(this).load(processedFile).centerCrop().into(imageView);
+                    uploadImage(processedFile);
+                } else if (!success) {
+                    Toast.makeText(this, "拍照已取消", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "无法读取拍摄的照片", Toast.LENGTH_SHORT).show();
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 1. 在 super.onCreate 之前应用保存的主题设置
-        applySavedTheme();
-        
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
         db = AppDatabase.getDatabase(this);
-        rootView = findViewById(android.R.id.content); // 获取根视图
         imageView = findViewById(R.id.imageView_photo);
         textViewStatus = findViewById(R.id.textView_status);
         textViewDiagnosis = findViewById(R.id.textView_diagnosis);
@@ -139,15 +119,8 @@ public class MainActivity extends AppCompatActivity {
         textViewReportContent = findViewById(R.id.textView_report_content); 
         textViewReportDate = findViewById(R.id.textView_report_date);       
         buttonSettings = findViewById(R.id.button_settings);
-        buttonThemeToggle = findViewById(R.id.button_theme_toggle); // 绑定明暗切换按钮
-        buttonCapture = findViewById(R.id.button_capture);
-        recyclerView = findViewById(R.id.recyclerView_medicines);
-        
-        // 新增 UI 元素绑定
-        textMedicineCount = findViewById(R.id.text_medicine_count);
-        layoutEmptyState = findViewById(R.id.layout_empty_state);
-        cardPhotoPreview = findViewById(R.id.card_photo_preview);
-        headerBackground = findViewById(R.id.view_header_background); // 需要在 XML 中给头部 View 加 ID
+        Button buttonCapture = findViewById(R.id.button_capture);
+        RecyclerView recyclerView = findViewById(R.id.recyclerView_medicines);
 
         // 初始化选择模式 View
         cardSelectionActions = findViewById(R.id.card_selection_actions);
@@ -160,10 +133,6 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        // 设置 RecyclerView 动画
-        LayoutAnimationController animation = AnimationUtils.loadLayoutAnimation(this, R.anim.layout_animation_fall_down);
-        recyclerView.setLayoutAnimation(animation);
-
         adapter.setOnItemClickListener(this::showEditDialog);
         adapter.setOnItemLongClickListener(medicine -> {
             // 长按不再弹出单个删除对话框，逻辑已移动到适配器进入选择模式
@@ -175,14 +144,8 @@ public class MainActivity extends AppCompatActivity {
         adapter.setOnSelectionModeListener(new MedicineAdapter.OnSelectionModeListener() {
             @Override
             public void onSelectionModeChanged(boolean enabled) {
-                if (enabled) {
-                    cardSelectionActions.setVisibility(View.VISIBLE);
-                    cardSelectionActions.setAlpha(0f);
-                    cardSelectionActions.animate().alpha(1f).setDuration(300).start();
-                } else {
-                    cardSelectionActions.animate().alpha(0f).setDuration(300).withEndAction(() -> 
-                        cardSelectionActions.setVisibility(View.GONE)
-                    ).start();
+                cardSelectionActions.setVisibility(enabled ? View.VISIBLE : View.GONE);
+                if (!enabled) {
                     checkboxAll.setChecked(false);
                 }
             }
@@ -220,13 +183,6 @@ public class MainActivity extends AppCompatActivity {
         buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
         buttonSettings.setOnClickListener(v -> showProfileSettingsDialog());
         
-        // 明暗切换逻辑
-        updateThemeToggleIcon(); // 初始化图标
-        buttonThemeToggle.setOnClickListener(v -> toggleThemeWithAnimation());
-
-        // 点击安全报告查看详情
-        textViewSafetyReport.setOnClickListener(v -> showSafetyReportDetails());
-
         refreshMedicineList();
         updateSafetyReportDisplay();
         fetchDailyReport(); 
@@ -235,116 +191,6 @@ public class MainActivity extends AppCompatActivity {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
-        }
-    }
-
-    private void applySavedTheme() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        int mode = prefs.getInt(KEY_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        AppCompatDelegate.setDefaultNightMode(mode);
-    }
-
-    private void updateThemeToggleIcon() {
-        int currentMode = AppCompatDelegate.getDefaultNightMode();
-        if (currentMode == AppCompatDelegate.MODE_NIGHT_YES) {
-            buttonThemeToggle.setImageResource(R.drawable.ic_sun); // 暗色模式显示太阳（切换到亮色）
-        } else {
-            buttonThemeToggle.setImageResource(R.drawable.ic_moon); // 亮色模式显示月亮（切换到暗色）
-        }
-    }
-
-    private void toggleThemeWithAnimation() {
-        int currentMode = AppCompatDelegate.getDefaultNightMode();
-        int newMode = (currentMode == AppCompatDelegate.MODE_NIGHT_YES) 
-                ? AppCompatDelegate.MODE_NIGHT_NO 
-                : AppCompatDelegate.MODE_NIGHT_YES;
-
-        // 保存新状态
-        SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit();
-        editor.putInt(KEY_THEME_MODE, newMode);
-        editor.apply();
-
-        // 关键修改：不使用 recreate()，而是手动触发颜色动画
-        // 注意：AppCompatDelegate.setDefaultNightMode 实际上会触发 Activity 重建
-        // 为了实现"同屏平滑变色"，我们需要拦截重建，或者使用自定义的颜色动画覆盖
-        // 但 Android 原生主题切换机制决定了必须重建 Activity 才能应用所有资源（如 drawable, styles）
-        // 真正的"同屏平滑变色"通常需要自定义 View 系统或 Compose
-        // 这里我们采用折中方案：使用 Window 动画让重建过程看起来像是在同屏发生
-        
-        // 1. 获取当前屏幕截图作为遮罩 (可选，这里简化为淡出)
-        // 2. 设置 Window 动画为淡入淡出
-        getWindow().setWindowAnimations(android.R.style.Animation_Activity);
-        
-        // 3. 切换模式
-        AppCompatDelegate.setDefaultNightMode(newMode);
-        
-        // 4. 重启 Activity (必须步骤)
-        // 使用 overridePendingTransition 实现淡入淡出，模拟"原地变色"
-        finish();
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        startActivity(getIntent());
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-    }
-
-    /**
-     * 动态更新主题颜色
-     * @param riskLevel 0: Safe (Green), 1: Low Risk (Blue), 2: Medium Risk (Yellow), 3: High Risk (Orange)
-     */
-    private void updateThemeColor(int riskLevel) {
-        int startColorRes, endColorRes, primaryColorRes;
-
-        switch (riskLevel) {
-            case 1: // Low Risk (Blue)
-                startColorRes = R.color.risk_low;
-                endColorRes = R.color.risk_low_end;
-                primaryColorRes = R.color.risk_low;
-                break;
-            case 2: // Medium Risk (Yellow)
-                startColorRes = R.color.risk_medium;
-                endColorRes = R.color.risk_medium_end;
-                primaryColorRes = R.color.risk_medium;
-                break;
-            case 3: // High Risk (Orange)
-                startColorRes = R.color.risk_high;
-                endColorRes = R.color.risk_high_end;
-                primaryColorRes = R.color.risk_high;
-                break;
-            case 0: // Safe (Green) - Default
-            default:
-                startColorRes = R.color.risk_safe;
-                endColorRes = R.color.risk_safe_end;
-                primaryColorRes = R.color.risk_safe;
-                break;
-        }
-
-        int newStartColor = ContextCompat.getColor(this, startColorRes);
-        int newEndColor = ContextCompat.getColor(this, endColorRes);
-        int newPrimaryColor = ContextCompat.getColor(this, primaryColorRes);
-
-        // 1. 更新头部渐变背景
-        if (headerBackground != null) {
-            // 使用 ValueAnimator 实现颜色平滑过渡
-            // 注意：这里简化处理，直接设置新背景，如果需要更平滑，可以对 GradientDrawable 的颜色属性做动画
-            GradientDrawable gradientDrawable = new GradientDrawable(
-                    GradientDrawable.Orientation.TL_BR,
-                    new int[]{newStartColor, newEndColor});
-            gradientDrawable.setCornerRadii(new float[]{0, 0, 0, 0, 32 * getResources().getDisplayMetrics().density, 32 * getResources().getDisplayMetrics().density, 32 * getResources().getDisplayMetrics().density, 32 * getResources().getDisplayMetrics().density});
-            
-            // 简单的淡入过渡
-            headerBackground.animate().alpha(0.5f).setDuration(150).withEndAction(() -> {
-                headerBackground.setBackground(gradientDrawable);
-                headerBackground.animate().alpha(1f).setDuration(150).start();
-            }).start();
-        }
-
-        // 2. 更新按钮颜色
-        if (buttonCapture != null) {
-            buttonCapture.setBackgroundTintList(ColorStateList.valueOf(newPrimaryColor));
-        }
-        
-        // 3. 更新选择模式卡片颜色
-        if (cardSelectionActions != null) {
-            cardSelectionActions.setCardBackgroundColor(newPrimaryColor);
         }
     }
 
@@ -371,10 +217,6 @@ public class MainActivity extends AppCompatActivity {
                     if (report.isSuccess()) {
                         textViewReportContent.setText(report.getSummary());
                         textViewReportDate.setText(report.getReportDate());
-                        
-                        // 简单的淡入动画
-                        textViewReportContent.setAlpha(0f);
-                        textViewReportContent.animate().alpha(1f).setDuration(500).start();
                     }
                 }
             }
@@ -472,18 +314,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            try {
-                currentPhotoFile = createImageFile();
-                photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", currentPhotoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            } catch (IOException ex) {
-                Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            Toast.makeText(this, "未检测到相机", Toast.LENGTH_LONG).show();
+        try {
+            currentPhotoFile = createImageFile();
+            photoUri = FileProvider.getUriForFile(this, "com.example.healthassistant.fileprovider", currentPhotoFile);
+            takePictureLauncher.launch(photoUri);
+        } catch (IOException ex) {
+            Toast.makeText(this, "文件创建失败", Toast.LENGTH_SHORT).show();
         }
     }
     
@@ -491,17 +327,6 @@ public class MainActivity extends AppCompatActivity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA).format(new Date());
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         return File.createTempFile("JPEG_" + timeStamp + "_", ".jpg", storageDir);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File processedFile = processImage(currentPhotoFile);
-            Glide.with(this).load(processedFile).centerCrop().into(imageView);
-            cardPhotoPreview.setVisibility(View.VISIBLE); // 拍照后显示预览卡片
-            uploadImage(processedFile);
-        }
     }
 
     private File processImage(File imageFile) {
@@ -533,9 +358,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void uploadImage(File file) {
         textViewStatus.setText("状态: AI 正在云端分析药单...");
-        // 重置为默认颜色 (青绿)
-        updateThemeColor(0);
-        
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
         MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
         
@@ -593,43 +415,19 @@ public class MainActivity extends AppCompatActivity {
             if (!currentSafetyReport.isSafe()) {
                 String overallMessage = currentSafetyReport.getOverallMessage();
                 if (overallMessage != null && !overallMessage.isEmpty()) {
-                    textViewSafetyReport.setText("⚠️ 安全警告: " + overallMessage);
-                    textViewSafetyReport.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.error)); 
-                    textViewSafetyReport.setBackgroundResource(R.drawable.bg_warning_light);
+                    textViewSafetyReport.setText("安全警告: " + overallMessage);
+                    textViewSafetyReport.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.holo_red_dark)); 
                     textViewSafetyReport.setVisibility(View.VISIBLE);
-                    
-                    // 存在风险，根据严重程度变色
-                    // 这里简单逻辑：只要不安全就视为高风险(橙色)，如果有更细粒度数据可调整
-                    // 假设：有相互作用或过敏风险 -> 高风险 (3)
-                    // 仅有重复用药 -> 中风险 (2)
-                    // 仅有剂量异常 -> 低风险 (1)
-                    
-                    int riskLevel = 3; // 默认为高风险
-                    if (currentSafetyReport.getInteractions() == null || currentSafetyReport.getInteractions().isEmpty()) {
-                         if (currentSafetyReport.getPersonalizedRisks() == null || currentSafetyReport.getPersonalizedRisks().isEmpty()) {
-                             // 没有相互作用和个性化风险，可能是重复用药
-                             riskLevel = 2;
-                         }
-                    }
-                    updateThemeColor(riskLevel);
-                    
                 } else {
                     textViewSafetyReport.setVisibility(View.GONE);
-                    updateThemeColor(0); // 默认安全
                 }
             } else {
-                textViewSafetyReport.setText("✅ 安全报告: 未发现严重风险 (点击查看详情)");
-                textViewSafetyReport.setTextColor(ContextCompat.getColor(MainActivity.this, R.color.primary));
-                textViewSafetyReport.setBackgroundResource(R.drawable.bg_tag_light);
+                textViewSafetyReport.setText("安全报告: ✅ 未发现严重风险 (点击查看详情)");
+                textViewSafetyReport.setTextColor(ContextCompat.getColor(MainActivity.this, android.R.color.holo_green_dark));
                 textViewSafetyReport.setVisibility(View.VISIBLE);
-                updateThemeColor(0); // 安全
             }
-            // 简单的淡入动画
-            textViewSafetyReport.setAlpha(0f);
-            textViewSafetyReport.animate().alpha(1f).setDuration(500).start();
         } else {
             textViewSafetyReport.setVisibility(View.GONE);
-            updateThemeColor(0); // 默认
         }
     }
 
@@ -712,20 +510,7 @@ public class MainActivity extends AppCompatActivity {
     private void refreshMedicineList() {
         new Thread(() -> {
             List<Medicine> list = db.medicineDao().getAllMedicines();
-            runOnUiThread(() -> {
-                adapter.setMedicines(list);
-                // 更新统计数字
-                textMedicineCount.setText(String.valueOf(list.size()));
-                // 空状态处理
-                if (list.isEmpty()) {
-                    layoutEmptyState.setVisibility(View.VISIBLE);
-                    recyclerView.setVisibility(View.GONE);
-                } else {
-                    layoutEmptyState.setVisibility(View.GONE);
-                    recyclerView.setVisibility(View.VISIBLE);
-                    recyclerView.scheduleLayoutAnimation();
-                }
-            });
+            runOnUiThread(() -> adapter.setMedicines(list));
         }).start();
     }
 }
