@@ -1,10 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- 默认主色调：青绿色 (安全/初始状态) -->
+    <color name="primary">#00BFA5</color>
+    <color name="primary_variant">#00897B</color>
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- 动态风险色系 -->
+    <color name="risk_safe">#00BFA5</color>       <!-- 青绿色 -->
+    <color name="risk_low">#2979FF</color>        <!-- 蓝色 -->
+    <color name="risk_medium">#FFC107</color>     <!-- 黄色 -->
+    <color name="risk_high">#FF6D00</color>       <!-- 橙色 -->
+
+    <!-- 渐变色辅助 (极浅色，最大化渐变对比度) -->
+    <color name="risk_safe_end">#B2DFDB</color>   <!-- 极浅青绿 -->
+    <color name="risk_low_end">#BBDEFB</color>    <!-- 极浅蓝 -->
+    <color name="risk_medium_end">#FFECB3</color> <!-- 极浅黄 -->
+    <color name="risk_high_end">#FFE0B2</color>   <!-- 极浅橙 -->
+
+    <!-- 辅助色 -->
+    <color name="secondary">#00E676</color>
+    <color name="secondary_variant">#00C853</color>
+    <color name="on_secondary">#000000</color>
+
+    <color name="accent">#FF9100</color>
+    
+    <color name="error">#FF5252</color>
+    <color name="success">#00E676</color>
+    <color name="warning">#FFAB00</color>
+
+    <!-- 背景色 -->
+    <color name="background">#F8F9FE</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F0F4FF</color>
+    
+    <color name="on_background">#1C1B1F</color>
+    <color name="on_surface">#1C1B1F</color>
+
+    <color name="text_primary">#263238</color>
+    <color name="text_secondary">#78909C</color>
+    <color name="text_hint">#B0BEC5</color>
+
+    <!-- 默认渐变 -->
+    <color name="gradient_start">#00BFA5</color>
+    <color name="gradient_end">#B2DFDB</color>
+
+    <!-- 卡片渐变背景 -->
+    <color name="card_gradient_start">#FFFFFF</color>
+    <color name="card_gradient_end">#E3F2FD</color>
+
+    <!-- 兼容旧代码 -->
+    <color name="purple_200">#80CBC4</color>
+    <color name="purple_500">#00BFA5</color>
+    <color name="purple_700">#00897B</color>
+    <color name="teal_200">#80DEEA</color>
+    <color name="teal_700">#0097A7</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
 </resources>

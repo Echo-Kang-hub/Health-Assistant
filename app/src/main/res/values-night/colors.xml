@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 暗色模式下的主色调 -->
+    <color name="primary">#00897B</color>
+    <color name="primary_variant">#00695C</color>
+    <color name="on_primary">#E0F2F1</color>
+
+    <!-- 动态风险色系 (暗色版) -->
+    <color name="risk_safe">#00897B</color>
+    <color name="risk_low">#1565C0</color>
+    <color name="risk_medium">#FFB300</color>
+    <color name="risk_high">#E65100</color>
+
+    <!-- 渐变色辅助 (暗色版也大幅拉开差距，结束色接近黑色或极深色) -->
+    <color name="risk_safe_end">#00251A</color>   <!-- 极深青绿 -->
+    <color name="risk_low_end">#001064</color>    <!-- 极深蓝 -->
+    <color name="risk_medium_end">#3E2723</color> <!-- 极深黄/褐 -->
+    <color name="risk_high_end">#3E1B0F</color>   <!-- 极深红橙 -->
+
+    <!-- 辅助色 -->
+    <color name="secondary">#00C853</color>
+    <color name="secondary_variant">#00E676</color>
+    <color name="on_secondary">#000000</color>
+
+    <color name="accent">#FF6D00</color>
+    
+    <color name="error">#CF6679</color>
+    <color name="success">#00C853</color>
+    <color name="warning">#FFB300</color>
+
+    <!-- 背景色 -->
+    <color name="background">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="surface_variant">#2C2C2C</color>
+    
+    <color name="on_background">#E0E0E0</color>
+    <color name="on_surface">#E0E0E0</color>
+
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#B0BEC5</color>
+    <color name="text_hint">#757575</color>
+
+    <!-- 默认渐变 -->
+    <color name="gradient_start">#00897B</color>
+    <color name="gradient_end">#00251A</color>
+
+    <!-- 卡片渐变背景 (暗色版) -->
+    <color name="card_gradient_start">#1E1E1E</color>
+    <color name="card_gradient_end">#2C2C2C</color>
+
+    <!-- 兼容旧代码 -->
+    <color name="purple_200">#80CBC4</color>
+    <color name="purple_500">#00897B</color>
+    <color name="purple_700">#00695C</color>
+    <color name="teal_200">#80DEEA</color>
+    <color name="teal_700">#0097A7</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+</resources>
