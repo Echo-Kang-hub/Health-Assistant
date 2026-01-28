@@ -1,4 +1,151 @@
 <resources>
-    <string name="app_name">HealthAssistant</string>
-    <string name="image_preview">Image Preview Placeholder</string>
+    <string name="app_name">随身AI健康管家</string>
+
+    <string name="nav_dashboard">首页</string>
+    <string name="nav_meds">用药</string>
+    <string name="nav_reports">报告</string>
+    <string name="nav_settings">我的</string>
+
+    <string name="action_start">开始使用</string>
+    <string name="action_skip">跳过</string>
+    <string name="action_next">下一步</string>
+    <string name="action_login">登录</string>
+    <string name="action_register">注册</string>
+    <string name="action_ai_assistant">AI 管家</string>
+
+    <string name="onboarding_title">随身 AI 健康管家</string>
+    <string name="onboarding_subtitle">规范管理用药与健康数据</string>
+    <string name="onboarding_privacy">仅用于提醒与报告，不替代医生建议</string>
+
+    <string name="auth_title">登录 / 注册</string>
+    <string name="auth_hint_email">邮箱或手机号</string>
+    <string name="auth_hint_password">密码</string>
+    <string name="auth_privacy">你的健康数据仅用于生成提醒与报告</string>
+    <string name="auth_toggle_register">没有账号？注册</string>
+    <string name="auth_toggle_login">已有账号？登录</string>
+
+    <string name="dashboard_title">今日</string>
+    <string name="dashboard_next_dose">下一次提醒</string>
+    <string name="dashboard_remaining">今日剩余</string>
+    <string name="dashboard_view_plan">查看计划</string>
+    <string name="dashboard_risk_banner">风险提示</string>
+    <string name="dashboard_health_summary">健康摘要</string>
+    <string name="dashboard_ai_tip">AI 今日建议</string>
+    <string name="dashboard_ai_generate">生成 AI 建议</string>
+    <string name="dashboard_ai_disclaimer">仅供健康管理参考，建议咨询医生/药师</string>
+    <string name="dashboard_quick_scan">扫描建档</string>
+    <string name="dashboard_quick_log">记录用药</string>
+    <string name="dashboard_quick_report">生成报告</string>
+
+    <string name="scan_title">扫描识别</string>
+    <string name="scan_hint">对准药盒或条形码</string>
+    <string name="scan_start">开始识别</string>
+    <string name="scan_manual">手动录入药品</string>
+    <string name="scan_gallery">相册导入</string>
+
+    <string name="recognition_processing">正在识别包装信息</string>
+    <string name="recognition_hint">网络不佳可稍后继续</string>
+    <string name="recognition_background">后台处理</string>
+
+    <string name="confirm_title">确认结果</string>
+    <string name="confirm_tip">识别结果需要你确认，避免错服</string>
+    <string name="confirm_ai_reparse">AI 重新解析用法用量</string>
+    <string name="confirm_ai_fill">AI 补全缺失字段</string>
+    <string name="confirm_submit">确认并生成计划</string>
+
+    <string name="plan_edit_title">用药计划</string>
+    <string name="plan_ai_recommend">AI 推荐时段</string>
+    <string name="plan_apply">一键应用</string>
+    <string name="plan_save">保存计划</string>
+
+    <string name="meds_title">用药</string>
+    <string name="meds_search">搜索药品</string>
+    <string name="meds_filter_today">今日</string>
+    <string name="meds_filter_all">全部</string>
+
+    <string name="reports_title">报告</string>
+    <string name="reports_generate">生成本周报告</string>
+    <string name="reports_ai_summary">AI 总结本周</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_demo">演示模式（示例数据）</string>
+    <string name="settings_data_sources">数据源管理</string>
+    <string name="settings_ai_tone">AI 输出风格</string>
+    <string name="settings_logout">退出登录</string>
+    <string name="settings_demo_hint">开启后会展示示例数据，不影响真实记录</string>
+    <string name="settings_tone_professional">专业</string>
+    <string name="settings_tone_simple">通俗</string>
+    <string name="settings_data_sources_status_default">睡眠/心率/血糖：未连接</string>
+
+    <string name="risk_center_title">风险中心</string>
+    <string name="risk_detail_title">风险详情</string>
+    <string name="risk_ai_explain">生成 AI 解释</string>
+    <string name="risk_ai_title">AI 解释</string>
+    <string name="risk_ai_wait">等待生成</string>
+    <string name="risk_disclaimer_default">风险提示仅供提醒，不构成诊断或处方建议</string>
+    <string name="risk_item_high">高危</string>
+    <string name="risk_item_title">可能存在药物相互作用</string>
+    <string name="risk_item_summary">该组合可能增加低血糖风险</string>
+
+    <string name="adherence_title">依从性</string>
+    <string name="adherence_summary_default">本周依从性 --</string>
+    <string name="adherence_ai_button">AI 建议优化提醒</string>
+    <string name="chat_title">AI 管家</string>
+    <string name="data_sources_title">数据源管理</string>
+
+    <string name="reports_trends_title">趋势与洞察</string>
+    <string name="reports_empty">尚未生成报告</string>
+    <string name="reports_ai_title">AI 总结</string>
+    <string name="reports_ai_wait">等待生成</string>
+
+    <string name="medication_placeholder_name">阿司匹林肠溶片</string>
+    <string name="medication_placeholder_usage">每日 1 次，每次 1 片</string>
+    <string name="medication_placeholder_next">下一次 08:00</string>
+
+    <string name="reminder_title">该服药了</string>
+    <string name="reminder_detail">药品 · 剂量</string>
+    <string name="reminder_taken">已服</string>
+    <string name="reminder_delay">延后 15 分钟</string>
+    <string name="reminder_skip">跳过</string>
+
+    <string name="dashboard_risk_title">风险提示</string>
+    <string name="dashboard_risk_summary">该组合可能增加低血糖风险</string>
+    <string name="dashboard_risk_view">查看详情</string>
+    <string name="dashboard_sleep">睡眠</string>
+    <string name="dashboard_heart">心率</string>
+    <string name="dashboard_glucose">血糖</string>
+    <string name="dashboard_sleep_value">6.8h</string>
+    <string name="dashboard_heart_value">78 bpm</string>
+    <string name="dashboard_glucose_value">5.6</string>
+    <string name="dashboard_next_default">02:15</string>
+    <string name="dashboard_remaining_default">今日剩余 2 次</string>
+
+    <string name="plan_with_meal">与餐同服</string>
+    <string name="plan_ai_title">AI 推荐时段</string>
+    <string name="plan_ai_wait">等待推荐</string>
+
+    <string name="chat_send">发送</string>
+    <string name="chat_role_user">用户</string>
+    <string name="chat_placeholder">内容</string>
+    <string name="chat_input_hint">输入问题…</string>
+
+    <string name="confirm_with_meal">与餐同服</string>
+    <string name="confirm_confidence">置信度 0.00</string>
+
+    <string name="hint_frequency_per_day">每日频次</string>
+    <string name="hint_times">时段（如 08:00,20:00）</string>
+    <string name="hint_dose">剂量</string>
+    <string name="hint_start_date">开始日期 (YYYY-MM-DD)</string>
+    <string name="hint_end_date">结束日期 (YYYY-MM-DD)</string>
+    <string name="hint_med_name">药品名称</string>
+    <string name="hint_spec">规格</string>
+    <string name="hint_usage">用法用量</string>
+
+    <string name="onboarding_feature_1">· 识别药品与用法用量，生成提醒计划</string>
+    <string name="onboarding_feature_2">· 风险提示可解释，建议咨询医生/药师</string>
+    <string name="onboarding_feature_3">· 数据闭环：提醒、依从性、报告</string>
+
+    <string name="data_source_sleep">睡眠</string>
+    <string name="data_source_status_disconnected">未连接</string>
+    <string name="data_source_action_connect">连接</string>
 </resources>

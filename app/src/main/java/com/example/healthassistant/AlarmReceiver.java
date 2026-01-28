@@ -17,8 +17,10 @@ public class AlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        String medicineName = intent.getStringExtra("medicine_name");
-        String dosage = intent.getStringExtra("dosage");
+        int planId = intent.getIntExtra("plan_id", -1);
+        int medicationId = intent.getIntExtra("medication_id", -1);
+        String scheduledAt = intent.getStringExtra("scheduled_at");
+        String dosage = intent.getStringExtra("dose");
 
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
@@ -34,7 +36,11 @@ public class AlarmReceiver extends BroadcastReceiver {
         }
 
         // 点击通知跳转到主界面
-        Intent mainIntent = new Intent(context, MainActivity.class);
+        Intent mainIntent = new Intent(context, ReminderActionActivity.class);
+        mainIntent.putExtra("plan_id", planId);
+        mainIntent.putExtra("medication_id", medicationId);
+        mainIntent.putExtra("scheduled_at", scheduledAt);
+        mainIntent.putExtra("dose", dosage);
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context, 
                 0, 
@@ -44,8 +50,8 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("用药提醒：该吃药了")
-                .setContentText("药品: " + medicineName + " | 剂量: " + dosage)
+                .setContentTitle("用药提醒")
+                .setContentText("点击记录已服/延后/跳过")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent);
