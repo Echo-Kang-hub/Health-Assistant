@@ -2,65 +2,27 @@ package com.example.healthassistant;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * 描述基于用户档案的个性化风险（如过敏、孕期/肝肾功能限制）
+ * 后端指示: 需要在 processPrescription 响应体的 safety_report 字段中填充此对象列表。
+ */
 public class Risk {
-    @SerializedName("id")
-    private int id;
-    @SerializedName("type")
-    private String type;
-    @SerializedName("severity")
-    private String severity;
-    @SerializedName("title")
-    private String title;
-    @SerializedName("summary")
-    private String summary;
-    @SerializedName("evidence")
-    private Object evidence;
-    @SerializedName("action")
-    private Object action;
-    @SerializedName("active")
-    private boolean active;
-    @SerializedName("createdAt")
-    private String createdAt;
-    @SerializedName("disclaimer")
-    private String disclaimer;
+    @SerializedName("risk_type")
+    private String riskType; // 例如: ALLERGY, PREGNANCY, LIVER_IMPAIRMENT
 
-    public int getId() {
-        return id;
-    }
+    @SerializedName("drug")
+    private String drug; // 涉及风险的药物名称
 
-    public String getType() {
-        return type;
-    }
+    @SerializedName("warning")
+    private String warning;
 
-    public String getSeverity() {
-        return severity;
-    }
+    // Getters
+    public String getRiskType() { return riskType; }
+    public String getDrug() { return drug; }
+    public String getWarning() { return warning; }
 
-    public String getTitle() {
-        return title;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public Object getEvidence() {
-        return evidence;
-    }
-
-    public Object getAction() {
-        return action;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public String getCreatedAt() {
-        return createdAt;
-    }
-
-    public String getDisclaimer() {
-        return disclaimer;
-    }
+    // Setters (可选)
+    public void setRiskType(String riskType) { this.riskType = riskType; }
+    public void setDrug(String drug) { this.drug = drug; }
+    public void setWarning(String warning) { this.warning = warning; }
 }
