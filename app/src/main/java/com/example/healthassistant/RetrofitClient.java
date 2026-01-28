@@ -17,7 +17,7 @@ public class RetrofitClient {
         if (apiService == null) {
             synchronized (RetrofitClient.class) {
                 if (apiService == null) {
-                    HttpUrl baseUrl = requireHttpUrl(normalizeBaseUrl(BuildConfig.BACKEND_BASE_URL), "BACKEND_BASE_URL");
+                    HttpUrl baseUrl = selectBaseUrl();
                     SessionManager sessionManager = new SessionManager(HealthAssistantApp.getInstance());
 
                     OkHttpClient okHttpClient = new OkHttpClient.Builder()
@@ -44,7 +44,7 @@ public class RetrofitClient {
         if (authService == null) {
             synchronized (RetrofitClient.class) {
                 if (authService == null) {
-                    HttpUrl baseUrl = requireHttpUrl(normalizeBaseUrl(BuildConfig.BACKEND_BASE_URL), "BACKEND_BASE_URL");
+                    HttpUrl baseUrl = selectBaseUrl();
                     OkHttpClient okHttpClient = new OkHttpClient.Builder()
                             .connectTimeout(30, TimeUnit.SECONDS)
                             .readTimeout(30, TimeUnit.SECONDS)
@@ -76,5 +76,12 @@ public class RetrofitClient {
             throw new IllegalStateException(label + " is not a valid URL: " + baseUrl);
         }
         return url;
+    }
+
+    private static HttpUrl selectBaseUrl() {
+        String primary = normalizeBaseUrl(BuildConfig.BACKEND_BASE_URL);
+        String fallback = normalizeBaseUrl(BuildConfig.FALLBACK_BACKEND_BASE_URL);
+        String chosen = (BuildConfig.DEBUG && !fallback.isEmpty()) ? fallback : primary;
+        return requireHttpUrl(chosen, "BACKEND_BASE_URL");
     }
 }
