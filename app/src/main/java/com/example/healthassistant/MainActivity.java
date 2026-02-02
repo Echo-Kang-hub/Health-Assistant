@@ -107,11 +107,7 @@ public class MainActivity extends AppCompatActivity {
     private SafetyReport currentSafetyReport;
     private UserProfile currentUserProfile;
 
-    private final ActivityResultLauncher<String> requestPermissionLauncher =
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) dispatchTakePictureIntent();
-            });
-
+    // === 新增/修改的 Launcher ===
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
@@ -120,6 +116,16 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, "通知权限未开启，提醒功能将无法正常工作", Toast.LENGTH_LONG).show();
                 }
             });
+    
+    private final ActivityResultLauncher<String> selectImageFromGalleryLauncher =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    handleGalleryImage(uri);
+                } else {
+                    Toast.makeText(this, "未选择图片", Toast.LENGTH_SHORT).show();
+                }
+            });
+    // =============================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -217,7 +223,10 @@ public class MainActivity extends AppCompatActivity {
             adapter.setSelectionMode(false);
         });
 
-        buttonCapture.setOnClickListener(v -> checkAndRequestPermissions());
+        // === 修改后的点击事件 ===
+        buttonCapture.setOnClickListener(v -> showCaptureOrGalleryDialog());
+        // =======================
+        
         buttonSettings.setOnClickListener(v -> showProfileSettingsDialog());
         
         // 明暗切换逻辑
@@ -463,14 +472,59 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "记录已删除", Toast.LENGTH_SHORT).show();
     }
 
-    private void checkAndRequestPermissions() {
+    // === 修改后的权限和图片处理逻辑 ===
+    
+    private void showCaptureOrGalleryDialog() {
+        final CharSequence[] options = {"拍照 (使用相机)", "从相册选择"};
+
+        new AlertDialog.Builder(this)
+                .setTitle("选择来源")
+                .setItems(options, (dialog, item) -> {
+                    if (item == 0) {
+                        // 拍照
+                        checkAndRequestCameraPermission(); 
+                    } else if (item == 1) {
+                        // 从相册选择
+                        checkAndRequestStoragePermission();
+                    }
+                }).show();
+    }
+    
+    private void checkAndRequestCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             dispatchTakePictureIntent();
         } else {
-            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) dispatchTakePictureIntent();
+                else Toast.makeText(this, "相机权限被拒绝", Toast.LENGTH_SHORT).show();
+            }).launch(Manifest.permission.CAMERA);
         }
     }
-
+    
+    private void checkAndRequestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED) {
+                selectImageFromGalleryLauncher.launch("image/*");
+            } else {
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (isGranted) selectImageFromGalleryLauncher.launch("image/*");
+                    else Toast.makeText(this, "读取相册权限被拒绝", Toast.LENGTH_SHORT).show();
+                }).launch(Manifest.permission.READ_MEDIA_IMAGES);
+            }
+        } else {
+            // Android 12 及以下
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                selectImageFromGalleryLauncher.launch("image/*");
+            } else {
+                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                    if (isGranted) selectImageFromGalleryLauncher.launch("image/*");
+                    else Toast.makeText(this, "读取相册权限被拒绝", Toast.LENGTH_SHORT).show();
+                }).launch(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+        }
+    }
+    
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -502,6 +556,7 @@ public class MainActivity extends AppCompatActivity {
             cardPhotoPreview.setVisibility(View.VISIBLE); // 拍照后显示预览卡片
             uploadImage(processedFile);
         }
+        // 图库选择逻辑已移至 selectImageFromGalleryLauncher 的回调中
     }
 
     private File processImage(File imageFile) {
@@ -530,6 +585,51 @@ public class MainActivity extends AppCompatActivity {
             return imageFile;
         }
     }
+    
+    // === 新增方法 ===
+    private void handleGalleryImage(Uri uri) {
+        // 1. 使用 Glide 加载并显示图片
+        Glide.with(this).load(uri).centerCrop().into(imageView);
+        cardPhotoPreview.setVisibility(View.VISIBLE); // 显示预览卡片
+
+        // 2. 将 URI 转换为临时 File 对象以进行上传
+        File fileToUpload = uriToFile(uri);
+        
+        if (fileToUpload != null) {
+            uploadImage(fileToUpload);
+        } else {
+            Toast.makeText(this, "无法处理选中的图片文件", Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    private File uriToFile(Uri uri) {
+        try {
+            // 使用与拍照相同的临时文件创建逻辑
+            File pictureFile = createImageFile(); 
+            if (pictureFile == null) return null;
+            
+            try (java.io.InputStream inputStream = getContentResolver().openInputStream(uri);
+                 FileOutputStream outputStream = new FileOutputStream(pictureFile)) {
+                
+                if (inputStream == null) return null;
+                
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+            }
+            // 图库图片通常不需要旋转，但为了统一处理上传的文件，我们仍调用 processImage (如果它能安全处理)
+            // 对于 URI 文件，我们可能需要不同的处理，这里暂时沿用 processImage
+            // 注意：如果原始图片是 PNG 或其他格式，压缩为 JPEG 90 可能会改变其属性，但为了兼容 uploadImage，暂时保留。
+            return processImage(pictureFile); 
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+    // ============
 
 //    private void uploadImage(File file) {
 //        textViewStatus.setText("状态: AI 正在云端分析药单...");
@@ -820,4 +920,5 @@ public class MainActivity extends AppCompatActivity {
             });
         }).start();
     }
+    // === 新增的方法结束 ===
 }
