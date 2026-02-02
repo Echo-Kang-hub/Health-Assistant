@@ -125,6 +125,26 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, "未选择图片", Toast.LENGTH_SHORT).show();
                 }
             });
+
+    // 新增：用于相机权限请求的 Launcher
+    private final ActivityResultLauncher<String> cameraPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    dispatchTakePictureIntent();
+                } else {
+                    Toast.makeText(this, "相机权限被拒绝", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+    // 新增：用于存储权限请求的 Launcher
+    private final ActivityResultLauncher<String> storagePermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    selectImageFromGalleryLauncher.launch("image/*");
+                } else {
+                    Toast.makeText(this, "读取相册权限被拒绝", Toast.LENGTH_SHORT).show();
+                }
+            });
     // =============================
 
     @Override
@@ -494,10 +514,7 @@ public class MainActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             dispatchTakePictureIntent();
         } else {
-            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) dispatchTakePictureIntent();
-                else Toast.makeText(this, "相机权限被拒绝", Toast.LENGTH_SHORT).show();
-            }).launch(Manifest.permission.CAMERA);
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
     }
     
@@ -507,20 +524,14 @@ public class MainActivity extends AppCompatActivity {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED) {
                 selectImageFromGalleryLauncher.launch("image/*");
             } else {
-                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                    if (isGranted) selectImageFromGalleryLauncher.launch("image/*");
-                    else Toast.makeText(this, "读取相册权限被拒绝", Toast.LENGTH_SHORT).show();
-                }).launch(Manifest.permission.READ_MEDIA_IMAGES);
+                storagePermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES);
             }
         } else {
             // Android 12 及以下
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
                 selectImageFromGalleryLauncher.launch("image/*");
             } else {
-                registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-                    if (isGranted) selectImageFromGalleryLauncher.launch("image/*");
-                    else Toast.makeText(this, "读取相册权限被拒绝", Toast.LENGTH_SHORT).show();
-                }).launch(Manifest.permission.READ_EXTERNAL_STORAGE);
+                storagePermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE);
             }
         }
     }
