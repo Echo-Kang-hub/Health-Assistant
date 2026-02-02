@@ -531,28 +531,85 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+//    private void uploadImage(File file) {
+//        textViewStatus.setText("状态: AI 正在云端分析药单...");
+//        // 重置为默认颜色 (青绿)
+//        updateThemeColor(0);
+//
+//        RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
+//        MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
+//
+//        MultipartBody.Part profilePart = null;
+//        if (currentUserProfile != null) {
+//            Gson gson = new Gson();
+//            String profileJson = gson.toJson(currentUserProfile);
+//            RequestBody profileBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), profileJson);
+//            profilePart = MultipartBody.Part.createFormData("user_profile", "user_profile.json", profileBody);
+//        }
+//
+//        RetrofitClient.getApiService().processPrescription(body, profilePart).enqueue(new Callback<HealthResponse>() {
+//            @Override
+//            public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
+//                if (response.isSuccessful() && response.body() != null) {
+//                    HealthResponse result = response.body();
+//
+//                    if (result.isSuccess()) {
+//                        textViewStatus.setText("状态: AI 分析完成！");
+//                        textViewDiagnosis.setText("诊断结论: " + (result.getDiagnosis() != null ? result.getDiagnosis() : "未明确"));
+//                        textViewNotes.setText("健康建议: " + (result.getNotes() != null ? result.getNotes() : "无额外说明"));
+//
+//                        currentSafetyReport = result.getSafetyReport();
+//                        updateSafetyReportDisplay();
+//
+//                        if (result.getMedicationPlan() != null) {
+//                            for (MedicinePlan plan : result.getMedicationPlan()) {
+//                                saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
+//                            }
+//                        }
+//                    } else {
+//                        String errorMessage = result.getError() != null && !result.getError().isEmpty() ? result.getError() : "未能识别处方信息";
+//                        textViewStatus.setText("状态: 识别失败");
+//                        textViewDiagnosis.setText("诊断结论: 识别失败");
+//                        textViewNotes.setText("错误信息: " + errorMessage);
+//                        textViewSafetyReport.setVisibility(View.GONE);
+//                        Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+//                    }
+//                } else {
+//                    textViewStatus.setText("状态: 服务器错误 (" + response.code() + ")");
+//                    textViewDiagnosis.setText("诊断结论: 请求失败");
+//                    textViewSafetyReport.setVisibility(View.GONE);
+//                }
+//            }
+//            @Override
+//            public void onFailure(Call<HealthResponse> call, Throwable t) {
+//                textViewStatus.setText("状态: 网络请求失败");
+//                textViewSafetyReport.setVisibility(View.GONE);
+//            }
+//        });
+//    }
+
     private void uploadImage(File file) {
         textViewStatus.setText("状态: AI 正在云端分析药单...");
         // 重置为默认颜色 (青绿)
         updateThemeColor(0);
-        
+
         RequestBody requestFile = RequestBody.create(MediaType.parse("image/jpeg"), file);
         MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
-        
-        MultipartBody.Part profilePart = null; 
+
+        MultipartBody.Part profilePart = null;
         if (currentUserProfile != null) {
             Gson gson = new Gson();
             String profileJson = gson.toJson(currentUserProfile);
             RequestBody profileBody = RequestBody.create(MediaType.parse("application/json; charset=utf-8"), profileJson);
             profilePart = MultipartBody.Part.createFormData("user_profile", "user_profile.json", profileBody);
         }
-        
+
         RetrofitClient.getApiService().processPrescription(body, profilePart).enqueue(new Callback<HealthResponse>() {
             @Override
             public void onResponse(Call<HealthResponse> call, Response<HealthResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     HealthResponse result = response.body();
-                    
+
                     if (result.isSuccess()) {
                         textViewStatus.setText("状态: AI 分析完成！");
                         textViewDiagnosis.setText("诊断结论: " + (result.getDiagnosis() != null ? result.getDiagnosis() : "未明确"));
@@ -561,29 +618,64 @@ public class MainActivity extends AppCompatActivity {
                         currentSafetyReport = result.getSafetyReport();
                         updateSafetyReportDisplay();
 
-                        if (result.getMedicationPlan() != null) {
-                            for (MedicinePlan plan : result.getMedicationPlan()) {
-                                saveToDatabase(plan.getName(), plan.getDosage(), plan.getFrequency());
-                            }
+                        // ================== 修改开始：批量保存到数据库 ==================
+                        List<MedicinePlan> plans = result.getMedicationPlan();
+                        if (plans != null && !plans.isEmpty()) {
+                            new Thread(() -> {
+                                int count = 0;
+                                for (MedicinePlan plan : plans) {
+                                    // 1. 空值检查，防止 crash 或存入 null
+                                    String name = plan.getName();
+                                    // 只有当药名有效时才保存
+                                    if (name != null && !name.trim().isEmpty()) {
+                                        String dosage = plan.getDosage() != null ? plan.getDosage() : "未明确";
+                                        String frequency = plan.getFrequency() != null ? plan.getFrequency() : "遵医嘱";
+
+                                        // 2. 插入数据库
+                                        db.medicineDao().insert(new Medicine(name, dosage, frequency, System.currentTimeMillis()));
+                                        count++;
+                                    }
+                                }
+
+                                // 3. 只有当确实有数据插入时，才刷新 UI
+                                if (count > 0) {
+                                    int finalCount = count;
+                                    runOnUiThread(() -> {
+                                        refreshMedicineList(); // 刷新列表
+                                        Toast.makeText(MainActivity.this,
+                                                "已自动将 " + finalCount + " 种药品加入药箱",
+                                                Toast.LENGTH_LONG).show();
+                                    });
+                                }
+                            }).start();
+                        } else {
+                            runOnUiThread(() ->
+                                    Toast.makeText(MainActivity.this, "分析完成，但在处方中未发现明确的药品信息", Toast.LENGTH_SHORT).show()
+                            );
                         }
+                        // ================== 修改结束 ==================
+
                     } else {
                         String errorMessage = result.getError() != null && !result.getError().isEmpty() ? result.getError() : "未能识别处方信息";
                         textViewStatus.setText("状态: 识别失败");
                         textViewDiagnosis.setText("诊断结论: 识别失败");
                         textViewNotes.setText("错误信息: " + errorMessage);
-                        textViewSafetyReport.setVisibility(View.GONE); 
+                        textViewSafetyReport.setVisibility(View.GONE);
                         Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_LONG).show();
                     }
                 } else {
                     textViewStatus.setText("状态: 服务器错误 (" + response.code() + ")");
                     textViewDiagnosis.setText("诊断结论: 请求失败");
-                    textViewSafetyReport.setVisibility(View.GONE); 
+                    textViewSafetyReport.setVisibility(View.GONE);
                 }
             }
+
             @Override
             public void onFailure(Call<HealthResponse> call, Throwable t) {
                 textViewStatus.setText("状态: 网络请求失败");
-                textViewSafetyReport.setVisibility(View.GONE); 
+                textViewSafetyReport.setVisibility(View.GONE);
+                t.printStackTrace(); // 建议打印错误堆栈以便调试
+                Toast.makeText(MainActivity.this, "网络错误: " + t.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }

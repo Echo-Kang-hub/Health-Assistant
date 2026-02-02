@@ -2,17 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 基础权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-    <!-- 提醒相关权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
-    <!-- 关键：解决 Android 11+ 无法识别相机的问题 -->
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
@@ -27,7 +26,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HealthAssistant"
         android:usesCleartextTraffic="true">
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.example.healthassistant.fileprovider"
@@ -40,7 +38,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="uiMode" 
+            android:configChanges="uiMode"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -48,7 +46,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 注册闹钟广播接收器 -->
         <receiver android:name=".AlarmReceiver" android:exported="false" />
 
     </application>
